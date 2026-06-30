@@ -2,44 +2,38 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, Notifiable;
+
+    protected $fillable = ['username', 'email', 'password', 'phone'];
+
+    protected $hidden = ['password', 'remember_token'];
 
     /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
+     * Semua role yang dimiliki user ini (bisa lebih dari satu untuk non-admin).
      */
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-    ];
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'user_roles');
+    }
 
     /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
+     * Cek apakah user punya role tertentu (di antara SEMUA role miliknya).
+     * Dipakai saat assign role, BUKAN untuk keputusan otorisasi per-request.
      */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    public function hasRole(string $roleName): bool
+    {
+        return $this->roles()->where('name', $roleName)->exists();
+    }
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
-    protected $casts = [
-        'email_verified_at' => 'datetime',
-        'password' => 'hashed',
-    ];
+    public function isAdmin(): bool
+    {
+        return $this->hasRole('admin');
+    }
 }
